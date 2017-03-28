@@ -9,7 +9,9 @@ const int echoPin1 = 4;
 const int trigPin2 = 5;
 const int echoPin2 = 6;
 long duration, cm1, cm2;
-
+char mode = 'a';          //mode a: straight line following     b: self control 
+int motor_speed;
+char direct;
 
 //////////////////////////////////////////////////////////////
 
@@ -18,14 +20,29 @@ void setup() {
   // put your setup code here, to run once:
 
 }
-
 void loop() {
   // put your main code here, to run repeatedly:
-  ultra_reading()
-  if ((cm1+cm2)/2>30){
-    
+  if (mode=='a'){
+    ultra_reading()
+    int distance = (cm1+cm2)/2;
+    if (distance>40){
+      motor_speed = 5*(distance-30)+10;
+      direct = "f";
+    }
+    if (distance<35){
+      motor_speed = 10*(35-distance)+10;
+      direct = "b";
+    }
+    else(){
+      direct = "s";
+    }
+    Motor("r",direct,motor_speed);
+    Motor("l",direct,motor_speed);
   }
-  if((cm1+cm2)/2>30
+  else if (mode =='b'){
+    // control mode here
+  }
+  
 
 }
 
