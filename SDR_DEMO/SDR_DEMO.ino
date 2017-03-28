@@ -1,7 +1,8 @@
 #include <SoftwareSerial.h>
 #include <Wire.h>
 /// HC05///
-SoftwareSerial HC05(A8, A9); // RX, TX
+SoftwareSerial Genotronex(A8, A9); // RX, TX    (A8-A15 can be used as RX and TX);
+char BluetoothData; // the data given from Computer
 
 /// Ultrasonic Sensor///
 const int trigPin1 = 2;
@@ -18,34 +19,12 @@ char direct;
 
 void setup() {
   // put your setup code here, to run once:
+  Genotronex.begin(9600);
+  Genotronex.println("Start listening from bluetooth");
+  Serial.begin(19200);
+  Serial.println("Start checking infos");
 
 }
-void loop() {
-  // put your main code here, to run repeatedly:
-  if (mode=='a'){
-    ultra_reading()
-    int distance = (cm1+cm2)/2;
-    if (distance>40){
-      motor_speed = 5*(distance-30)+10;
-      direct = "f";
-    }
-    if (distance<35){
-      motor_speed = 10*(35-distance)+10;
-      direct = "b";
-    }
-    else(){
-      direct = "s";
-    }
-    Motor("r",direct,motor_speed);
-    Motor("l",direct,motor_speed);
-  }
-  else if (mode =='b'){
-    // control mode here
-  }
-  
-
-}
-
 void ultra_reading(){
   
   pinMode(trigPin1, OUTPUT);
@@ -104,4 +83,75 @@ void Motor(char motor, char direct, int spd=0){
       digitalWrite(9, HIGH);
     }}
   }
+
+  
+void loop() {
+  if (Genotronex.available()){
+    BluetoothData=Genotronex.read();
+    Serial.println(String(BluetoothData));
+   if(String(BluetoothData)=="b"){   // if number 1 pressed ....
+   Genotronex.println("Changed to control mode");
+   mode = 'b';
+   }
+  if (String(BluetoothData)=="a"){// if number 0 pressed ....
+   Genotronex.println("Changed to object following mode");
+   mode = 'a';
+  }
+  }
+  if (mode=='a'){
+    Serial.println("mode a working");
+    ultra_reading();
+    int distance = (cm1+cm2)/2;
+    if (distance>40){
+      motor_speed = 5*(distance-30)+10;
+      direct = "f";
+    }
+    if (distance<35){
+      motor_speed = 10*(35-distance)+10;
+      direct = "b";
+    }
+    else{
+      direct = "s";
+    }
+    Motor("r",direct,motor_speed);
+    Motor("l",direct,motor_speed);
+  }
+  else if (mode =='b'){
+    // control mode here
+    Serial.println(String(BluetoothData));
+   if(String(BluetoothData)=="f"){   //forward
+    Genotronex.println("forward");
+    Motor("r","f",100);
+    Motor("l","f",100);
+    delay(50);
+    BluetoothData = "w";  //change to waiting mode;
+   }
+  if(String(BluetoothData)=="h"){   //backward
+    Genotronex.println("backward");
+    Motor("r","b",100);
+    Motor("l","b",100);
+    delay(50);
+    BluetoothData = "w";
+   }
+   if(String(BluetoothData)=="l"){   //left
+    Genotronex.println("left");
+    Motor("r","f",50);
+    Motor("l","b",50);
+    delay(50);
+    BluetoothData = "w";
+   }
+   if(String(BluetoothData)=="r"){   //right
+    Genotronex.println("right");
+    Motor("r","b",50);
+    Motor("l","f",50);
+    delay(50);
+    BluetoothData = "w";
+    }
+    }
+   
+  }
+ 
+    
+
+
 
