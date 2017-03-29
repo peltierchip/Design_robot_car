@@ -118,11 +118,11 @@ void loop() {
     int distance = (cm1+cm2)/2;
     if (distance>40){
       
-      motor_speed = 8*(distance-40)+50;
+      motor_speed = 5*(distance-40)+50;
       motor_speed = min(motor_speed,255);
       Serial.println(motor_speed);
       Motor('r','b',motor_speed);
-      Motor('l','f',motor_speed);
+      Motor('l','f',motor_speed-5);
       
     }
     if (distance<30){
@@ -130,7 +130,7 @@ void loop() {
       char left_direct = 'b';
       char right_direct = 'f';
       motor_speed = min(motor_speed,255);
-      Motor('r','f',motor_speed);
+      Motor('r','f',motor_speed+5);
       Motor('l','b',motor_speed);
       Serial.println('b');
       Serial.println(motor_speed);
@@ -146,34 +146,36 @@ void loop() {
     // control mode here
     Serial.println(String(BluetoothData));
    if(String(BluetoothData)=="f"){   //forward
-    Genotronex.println("forward");
-    Motor('r','b',200);
+    //Genotronex.println("forward");
+    Motor('r','b',205);
     Motor('l','f',200);
    }
   if(String(BluetoothData)=="h"){   //backward
-    Genotronex.println("backward");
-    Motor('r','b',200);
-    Motor('l','f',200);
+    //Genotronex.println("backward");
+    Motor('r','f',205);
+    Motor('l','b',200);
    }
    if(String(BluetoothData)=="l"){   //left
-    Genotronex.println("left");
-    Motor('r','f',150);
-    Motor('l','f',150);
+    //Genotronex.println("left");
+    Motor('r','f',200);
+    Motor('l','f',200);
 
    }
    if(String(BluetoothData)=="r"){   //right
-    Genotronex.println("right");
-    Motor('r','b',150);
-    Motor('l','b',150);
+    //Genotronex.println("right");
+    Motor('r','b',200);
+    Motor('l','b',200);
     }
 
     if(String(BluetoothData)=="s"){   //right
-    Genotronex.println("stop");
+    //Genotronex.println("stop");
     Motor('r','s');
     Motor('l','s');
     }
    
   }
+
+}
  
     
 
