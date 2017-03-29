@@ -153,7 +153,8 @@ void setup() {
 }
 
 void loop() {
-  switchstate = digitalRead(2);
+  pinMode(3,INPUT);
+  switchstate = digitalRead(3);
   int sensorReading = analogRead(A0);
   // map the sensor range (four options):
   // ex: 'long int map(long int, long int, long int, long int, long int)'
