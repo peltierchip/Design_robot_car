@@ -1,3 +1,6 @@
+// One thing needs to be noticed: connect the left motor to myservo and right servo to myservo2
+// for myservo, set the same direction as the real moving direction. For myservo2, gives the opposite direction
+
 #include <SoftwareSerial.h>
 #include <Wire.h>
 #include <Servo.h>
@@ -40,7 +43,7 @@ void ultra_reading(){
   digitalWrite(trigPin1, LOW);
   pinMode(echoPin1, INPUT);
   duration = pulseIn(echoPin1, HIGH);
-  cm1 = microsecondsToCentimeters(duration);
+  cm1 = microsecondsToCentimeters(duration);                       //define cm1 as left sensor reading, cm2 as right sensor reading
 
   pinMode(trigPin2, OUTPUT);
   digitalWrite(trigPin2, LOW);
@@ -123,33 +126,54 @@ void loop() {
    mode = 'a';
   }
   }
-  if (mode=='a'){
+
+  /////////////////mode a         object following mode////////////////
+  if (mode=='a'){                  
     
     ultra_reading();
 
-    int distance = (cm1+cm2)/2;
-    if (distance>30){
-      
-      motor_speed = 6*(distance-30)+50;
-      motor_speed = min(motor_speed,255);
-      Serial.println(motor_speed);
-      Motor('r','b',motor_speed);
-      Motor('l','f',motor_speed);
+    int distance = min(cm1,cm2);
+    if (cm1>200 && cm2 >200){
+      ultra_reading();      // make sure that it is a constant reading but not unstable misreading
+      if (cm1>200 && cm2 >200){
+      // rotate in one direction to find the object
+      Motor('r','b',200);
+      Motor('l','f',0);
+      }
       
     }
-    if (distance<30){
-      motor_speed = 12*(30-distance)+50;
-      char left_direct = 'b';
-      char right_direct = 'f';
-      motor_speed = min(motor_speed,255);
+    else if (cm1>200 || cm2 >200){
+      if(cm1>cm2){
+        Motor('r','f',200);
+      Motor('l','f',200);
+      }    
+      else{
+        Motor('r','b',200);
+      Motor('l','b',200);
+      }
       Motor('r','f',motor_speed);
       Motor('l','b',motor_speed);
-      Serial.println('b');
-      Serial.println(motor_speed);
+    }
+    else if (cm1<200 &&cm2<200){
+      distance = min(cm1,cm2);
+      if (distance<30){
+       motor_speed = min(10*(30-distance)+50,250);
+      Motor('r','f',motor_speed);
+      Motor('l','b',motor_speed);
+      }
+      else if(distance >40){
+        motor_speed = min(6*(distance-30)+50,250);
+        Motor('r','b',motor_speed);
+      Motor('l','f',motor_speed);
+      }
+      else{
+        Motor('r','s',0);
+      Motor('l','s',0);
+      }
     }
     else{
-      char left_direct = 's';
-      char right_direct = 's';
+      Motor('r','s',0);
+      Motor('l','s',0);
     }
     
     

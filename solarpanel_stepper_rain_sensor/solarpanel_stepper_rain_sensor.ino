@@ -194,7 +194,7 @@ void loop() {
     anticlockwise();
     clockwise2();
   }
-  Serial.println(current_position);
+  Serial.println(mode);
   
 }
 
