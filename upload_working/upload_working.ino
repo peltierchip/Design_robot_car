@@ -75,14 +75,21 @@ void set_up_code(){
 void loop() {
 set_up_code();
 Serial.println("making POST request"); 
-Serial.println(postData); 
+
 String contentType = "application/x-www-form-urlencoded";
-//String postData = "drone=1e&name=1";
+String postData = "drone=1&rain=1";
+//Serial.println(postData); 
 client.post("/host.php", contentType, postData);
+//client.get("/host.php");
 // read the status code and body of the response
 statusCode = client.responseStatusCode();
 response = client.responseBody(); // in response, drone first then rain (first yes means drone there.... 
-
+String info = String(response);
+info.remove(0,2);
+info.remove(4);
+Serial.println(info);
+//drone = info[0].toInt;
+//rain = info[2].toInt;
 Serial.print("Status code: ");
 Serial.println(statusCode);
 Serial.print("Response: ");
@@ -99,7 +106,7 @@ delay(10000);
 //////////////////////corresponding php file/////////////////
 //<?php
 //
-//foreach ($_REQUEST as $key => $value)
+//foreach ($_POST as $key => $value)
 //{
 //if ($key == "drone") {
 //$drone = $value;
@@ -108,6 +115,9 @@ delay(10000);
 //$rain = $value;
 //}
 //}
+//
+//echo "$drone $rain\n";
+//
 //if ($drone < 1) {
 //echo "No\n";
 //} else {
@@ -119,5 +129,6 @@ delay(10000);
 //echo "Yes\n";
 //}
 //?>
+
 
 
