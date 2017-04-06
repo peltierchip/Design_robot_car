@@ -94,3 +94,30 @@ delay(10000);
 
 } 
 
+
+
+//////////////////////corresponding php file/////////////////
+//<?php
+//
+//foreach ($_REQUEST as $key => $value)
+//{
+//if ($key == "drone") {
+//$drone = $value;
+//}
+//if ($key == "rain") {
+//$rain = $value;
+//}
+//}
+//if ($drone < 1) {
+//echo "No\n";
+//} else {
+//echo "Yes\n";
+//}
+//if ($rain < 1) {
+//echo "No\n";
+//} else {
+//echo "Yes\n";
+//}
+//?>
+
+
