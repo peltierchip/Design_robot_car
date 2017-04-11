@@ -2,8 +2,7 @@
 // for drone, 0 means no drone, 1 means drone is in there
 // for rain, 0 means no rain, 1 means raining
 int rain = 0;
-int drone = 1;
-String postData = "drone=1&rain=0";
+String postData;
 
 #include <ESP8266WiFi.h>
 #include <ArduinoHttpClient.h>
@@ -58,18 +57,7 @@ void get_status_from_mega(){
   
 }
 void set_up_code(){
-  if (rain == 0 and drone == 1){
-    postData = "drone=1&rain=0";
-  }
-  else if (rain == 1 and drone == 1){
-    postData = "drone=1&rain=1";
-  }
-  else if (rain == 1 and drone == 0){
-    postData = "drone=0&rain=1";
-  }
-  else{
-    postData = "drone=0&rain=0";
-  }
+  
 }
 
 void loop() {
@@ -77,7 +65,7 @@ set_up_code();
 Serial.println("making POST request"); 
 
 String contentType = "application/x-www-form-urlencoded";
-String postData = "drone=1&rain=1";
+String postData = "start=1&rain=0&positionx=237.26&positiony=158.03";
 //Serial.println(postData); 
 client.post("/host.php", contentType, postData);
 //client.get("/host.php");
@@ -85,11 +73,7 @@ client.post("/host.php", contentType, postData);
 statusCode = client.responseStatusCode();
 response = client.responseBody(); // in response, drone first then rain (first yes means drone there.... 
 String info = String(response);
-info.remove(0,2);
-info.remove(4);
-Serial.println(info);
-//drone = info[0].toInt;
-//rain = info[2].toInt;
+
 Serial.print("Status code: ");
 Serial.println(statusCode);
 Serial.print("Response: ");
@@ -106,29 +90,38 @@ delay(10000);
 //////////////////////corresponding php file/////////////////
 //<?php
 //
+//$start = 0;
 //foreach ($_POST as $key => $value)
 //{
-//if ($key == "drone") {
-//$drone = $value;
+//if ($key == "start") {
+//$start = $value;
 //}
 //if ($key == "rain") {
 //$rain = $value;
+//
 //}
+//if ($key == "positionx") {
+//$positionx= $value;
+//
+//}
+//if ($key == "positiony") {
+//$positiony = $value;
+//}
+//}
+//if ($start == 1){
+//$myfile = fopen("host_data.txt", "w") or die("Unable to open file!");
+//fwrite($myfile, $rain);
+//fwrite($myfile, "\n");
+//fwrite($myfile, $positionx);
+//fwrite($myfile, "\n");
+//fwrite($myfile, $positiony);
+//fclose($myfile);
 //}
 //
-//echo "$drone $rain\n";
 //
-//if ($drone < 1) {
-//echo "No\n";
-//} else {
-//echo "Yes\n";
-//}
-//if ($rain < 1) {
-//echo "No\n";
-//} else {
-//echo "Yes\n";
-//}
-//?>
+//$myfile = fopen("host_data.txt", "r") or die("Unable to open file!");
+//echo fread($myfile,filesize("webdictionary.txt"));
+//fclose($myfile);
 
 
 
