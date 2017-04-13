@@ -3,7 +3,7 @@
 
 //GPS is not included in this version.
 
-//Solar panel is not included in this version.
+//For solar panel turning, this version is using pins: 24,25,26,27,28,29,30,31.
 
 
 
