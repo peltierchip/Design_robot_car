@@ -181,11 +181,10 @@ void loop() {
   if (current_position == final_position){
      //////stop
      ///do nothing
-  }
-  else if (current_position > final_position){
+  }else if (current_position > final_position){
      ///back to 0
      current_position = current_position -1;
-     clockwise();
+     clockwise();d
      anticlockwise2();
   }
   else if(current_position < final_position){
@@ -194,6 +193,7 @@ void loop() {
     anticlockwise();
     clockwise2();
   }
+  
   Serial.println(mode);
   
 }
