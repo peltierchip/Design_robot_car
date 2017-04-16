@@ -4,7 +4,7 @@
 // One thing needs to be noticed: connect the left motor to myservo and right servo to myservo2
 // for myservo, set the same direction as the real moving direction. For myservo2, gives the opposite direction
 
-//GPS is not included in this version.
+//GPS is included in this version.
 
 //For solar panel turning, this version is using pins: 24,25,26,27,28,29,30,31.
 
@@ -16,16 +16,16 @@ int motorPin1 = 24;
 int motorPin2 = 25;
 int motorPin3 = 26;
 int motorPin4 = 27;
-int motorPin5 = 28;
-int motorPin6 = 29;
-int motorPin7 = 30;
-int motorPin8 = 31;
+int motorPin5 = 32;
+int motorPin6 = 33;
+int motorPin7 = 34;
+int motorPin8 = 35;
 
 int delayTime = 10;
 int s_mode = 0;         // drawer mode
 int r_mode = 0;         // rain sensor mode
 int current_position =0; //stepper position
-int final_position =0;
+int final_position=0;
 int current_leg = 0; //servo position
 int final_leg = 0;
 
@@ -33,6 +33,7 @@ int final_leg = 0;
 
 /// HC05///
 SoftwareSerial Genotronex(A8, A9); // RX, TX    (A8-A15 can be used as RX and TX);
+SoftwareSerial WIFI(14,15);
 char BluetoothData; // the data given from Computer
 
 /// Ultrasonic Sensor///
@@ -56,8 +57,61 @@ Servo myservo2;  // create servo object to control a servo
 int pos = 0;    // variable to store the servo position
 
 
+///INPUT PROCESSING///
+const unsigned int MAX_INPUT = 50;
+char out_buff[64];
+String inp;
+String command;
+
+///COMPASS///
+#include <Wire.h>
+#define CMPS11_ADDRESS 0x60  // Address of CMPS11 shifted right one bit for arduino wire library
+#define ANGLE_8  1           // Register to read 8bit angle from
+unsigned char high_byte, low_byte, angle8;
+char pitch, roll;
+unsigned int angle16;
+
+///GPS///
+#include <Adafruit_GPS.h>
+Adafruit_GPS GPS(&Serial1);
+#define GPSECHO  true
+boolean usingInterrupt = false;
+void useInterrupt(boolean); // Func prototype keeps Arduino 0023 happy
+float homelat=120.44909667968750000000;
+float homelong=10357.89355468750000000000;
+float homelat2=120.43170166015625000000;
+float homelong2=10357.91210937500000000000;
+float homelat3=120.43969726562500000000;
+float homelong3=10357.89257812500000000000;
+float tarlat=120.50099945068359375000;
+float tarlong=10357.88964843750000000000;
+float mylat;
+float mylong;
+float deltaHeading=0.0;
+float WPHeading;
+float deltaDist;
+float followbearing;
+float followerror;
+float followlasterror;
+
+/// VARIABLES ///
+int g_mode;                  /// be careful here 
+float currentbearing;
+float targetbearing;
+int confirm =0;
+int travelling =0;
+float lasterror = 0;
+float kp = 2.50; // remain to be tested
+float kd = 8.0  ; // remain to be tested
+float ki = 0.0;
+int i = 0;
+int basespeed=150;
+int offset =0;
+
 
 //////////////////////////////////////////////////////////////
+
+//// wifi upload ///
 
 
 
@@ -212,11 +266,178 @@ void Motor(char motor, char direct, int spd=0){
       digitalWrite(9, HIGH);
     }}
   }
+
+
+  /////////  bearing ////////////
+  float GetBearings(){
+  float angle;
+  Wire.beginTransmission(CMPS11_ADDRESS);  //starts communication with CMPS11
+  Wire.write(ANGLE_8);                     //Sends the register we wish to start reading from
+  Wire.endTransmission();
+ 
+  // Request 5 bytes from the CMPS11
+  // this will give us the 8 bit bearing, 
+  // both bytes of the 16 bit bearing, pitch and roll
+  Wire.requestFrom(CMPS11_ADDRESS, 5);       
+  
+  while(Wire.available() < 5);        // Wait for all bytes to come back
+  
+  angle8 = Wire.read();               // Read back the 5 bytes
+  high_byte = Wire.read();
+  low_byte = Wire.read();
+  pitch = Wire.read();
+  roll = Wire.read();
+  
+  angle16 = high_byte;                 // Calculate 16 bit angle
+  angle16 <<= 8;
+  angle16 += low_byte;
+  float reading =float(angle16/10.0);
+  float balanceno;
+
+  if (abs(reading)>180){
+    while(reading>180){
+      balanceno = reading-360.0;
+      reading=balanceno;
+    while(reading<-180){
+      balanceno = reading + 360.0;
+      reading=balanceno;
+    }
+    }
+  }else{
+    balanceno = reading;
+  }
+//  XBee.println(-1.0*balanceno);
+  return -1.0*balanceno;
+}
+
+
+//////////////// GPS ////////////////
+SIGNAL(TIMER0_COMPA_vect) {
+  char c = GPS.read();
+  // if you want to debug, this is a good time to do it!
+#ifdef UDR0
+  if (GPSECHO)
+    if (c) UDR0 = c;  
+    // writing direct to UDR0 is much much faster than Serial.print 
+    // but only one character can be written at a time. 
+#endif
+}
+
+void useInterrupt(boolean v) {
+  if (v) {
+    // Timer0 is already used for millis() - we'll just interrupt somewhere
+    // in the middle and call the "Compare A" function above
+    OCR0A = 0xAF;
+    TIMSK0 |= _BV(OCIE0A);
+    usingInterrupt = true;
+  } else {
+    // do not call the interrupt function COMPA anymore
+    TIMSK0 &= ~_BV(OCIE0A);
+    usingInterrupt = false;
+  }
+}
+
+uint32_t timer = millis();
+
+void calibrateCMPS11()
+{
+
+   Wire.beginTransmission(CMPS11_ADDRESS);           //start communication with CMPS10
+   Wire.write(0);                             //Send the register we wish to start reading from
+   Wire.write(0xF0);                          //Calibration sequence byte 1
+   Wire.endTransmission();
+   delay(20);
+
+   Wire.beginTransmission(CMPS11_ADDRESS);           //start communication with CMPS10
+   Wire.write(0);                             //Send the register we wish to start reading from
+   Wire.write(0xF5);                          //Calibration sequence byte 2
+   Wire.endTransmission();
+   delay(20);
+
+   Wire.beginTransmission(CMPS11_ADDRESS);           //start communication with CMPS10
+   Wire.write(0);                             //Send the register we wish to start reading from
+   Wire.write(0xF7);                          //Calibration sequence byte 2
+   Wire.endTransmission();
+   delay(20);
+   
+   delay(30000);
+   
+   Wire.beginTransmission(CMPS11_ADDRESS);           //start communication with CMPS10
+   Wire.write(0);                             //Send the register we wish to start reading from
+   Wire.write(0xF8);                          //Exit calibration mode
+   Wire.endTransmission();
+   delay(20);
+
+}
+
+void PathFinder(float MyLat, float MyLon) {
+    //Calculates the distance left to next waypoint
+    //Updates the WPCounter if it is within 10m range
+    //  Serial.print("Current Latitude: "); Serial.println(MyLat,7);
+    //  Serial.print("Current longitude: "); Serial.println(MyLon,7);
+    float deltaLat = tarlat - MyLat;
+    float deltaLon = tarlong - MyLon;
+    //Earth's circumference (40130170m) divided by 360 degrees gives 111195
+     float deltaLatDist = deltaLat*111195;
+     float deltaLonDist = deltaLon*111195;
+     deltaDist = sqrt((deltaLatDist*deltaLatDist) + (deltaLonDist*deltaLonDist));
+      //  Serial.print("Latitudinal Distance to Waypoint is: "); Serial.println(deltaLat,7);
+      //  Serial.print("Longitudinal Distance to Waypoint is: "); Serial.println(deltaLon,7);
+      //  Serial.println(deltaLatDist);
+      //  Serial.println(deltaLonDist);
+     Serial.println(deltaDist);
+    // Calculate the required heading now that distance has been calculated
+     WPHeading = (atan(deltaLonDist/deltaLatDist))*57.3;
+    // The following set of If-Else Conditionals normalises the angles about y-axis
+    if ((deltaLat < 0) && (deltaLon >= 0)) {
+      WPHeading = WPHeading + 180;
+      } else if ((deltaLat < 0) && (deltaLon < 0)) {
+      WPHeading = WPHeading - 180;
+      }
+  //  Serial.print("The heading to the waypoint is "); Serial.println(WPHeading);
+    // Addition to find deltaHeading because MyHeading has opposite sign convention to WPHeading
+    // If deltaHeading is POSITIVE, then Robot has to turn RIGHT
+    // If deltaHeading is NEGATIVE, then Robot has to turn LEFT
+    deltaHeading = WPHeading - currentbearing;
+    if (deltaHeading>180){
+      deltaHeading-=360;
+    } else if (deltaHeading <-180){
+      deltaHeading+=360;
+    }
+    // Positive deltaHeading implies clockwise rotation about y-x plane
+    // Negative deltaHeading implies counter-clockwise rotation about y-x plane
+    // deltaHeading is the error that you want to minimise to zero
+ 
+}
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
   
 void setup() {
+/// gps setup
+  GPS.begin(9600);
+  GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
+  GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ); 
+  GPS.sendCommand(PGCMD_ANTENNA);
+  useInterrupt(true);
+  delay(1000);
+  Serial1.println(PMTK_Q_RELEASE);
+  targetbearing =90;
+
+// servo setup  
   myservo.attach(7);  // attaches the servo on pin 7 to the servo object
   myservo2.attach(10);
   // put your setup code here, to run once:
+  
   Genotronex.begin(9600);
   Genotronex.println("Start listening from bluetooth");
   Serial.begin(19200);
@@ -250,8 +471,8 @@ void loop() {
   //always read rain sensor reading first
   int sensorReading = analogRead(A10);
   int range = map(sensorReading, sensorMin, sensorMax, 0, 3);   ///0-flood     1-rain warning      2-not raining
-  
-  if (range==1 || range ==2){    //// raining
+  if (range==1 || range ==0){    //// raining
+    Serial.println("raining");   
     final_position == 0;
     if (current_position == final_position){
      //////stop
@@ -274,7 +495,7 @@ void loop() {
 
   if (Genotronex.available()){
     BluetoothData=Genotronex.read();
-    Serial.println(String(BluetoothData));
+   //Serial.println(String(BluetoothData));
    if(String(BluetoothData)=="b"){   // if button "b" pressed ....
    Genotronex.println("Changed to control mode");
    mode = 'b';
@@ -535,37 +756,150 @@ void loop() {
 
   
   if(String(BluetoothData)=="t" ){   //// turn solar panels
+    
     Motor('r','s');
     Motor('l','s');
-    if (final_position == 0){
-      final_position == 180;
+    if (current_position == 0){
+      final_position = 180;
+      }
+    if (current_position == 180){
+      final_position = 0;
+      Serial.println("changed to 0");   
+      
     }
-    else if (final_position == 180){
-      final_position == 0;
-    }
-    if (range==0){
+    
+    if (range==2){
       if (current_position == final_position){
      //////stop
      ///do nothing
   }else if (current_position > final_position){
      ///back to 0
      current_position = current_position -1;
-     clockwise();
-     anticlockwise2();
+     clockwise2();
+     anticlockwise();
   }
   else if(current_position < final_position){
     ////go to 180
     current_position = current_position +1;
-    anticlockwise();
-    clockwise2();
+    anticlockwise2();
+    clockwise();
   }
     }
   }
 
   }
+
+
+
+  //////////////     GPS mode         ///////////////////
+  else if (mode == 'g'){
+    //firtly get current bearing
+    currentbearing = GetBearings();
+    Serial.print("Current Bearing : ");
+    Serial.println(currentbearing);
+
+    //then read gps
+     if (! usingInterrupt) {
+    // read data from the GPS in the 'main loop'
+    char c = GPS.read();
+    // if you want to debug, this is a good time to do it!
+//    if (False){
+//       if (c) Serial.print(c);
+//    }
+  }
+
+  // if a sentence is received, we can check the checksum, parse it...
+  if (GPS.newNMEAreceived()) {
+    // a tricky thing here is if we print the NMEA sentence, or data
+    // we end up not listening and catching other sentences! 
+    // so be very wary if using OUTPUT_ALLDATA and trytng to print out data
+    //Serial.println(GPS.lastNMEA());   // this also sets the newNMEAreceived() flag to false
+  
+    if (!GPS.parse(GPS.lastNMEA()))   // this also sets the newNMEAreceived() flag to false
+      return;  // we can fail to parse a sentence in which case we should just wait for another
+  }  
+
+if (millis() - timer > 1000) { 
+    timer = millis(); // reset the timer
+    
+//    Serial.print("\nTime: ");
+//    Serial.print(GPS.hour, DEC); Serial.print(':');
+//    Serial.print(GPS.minute, DEC); Serial.print(':');
+//    Serial.print(GPS.seconds, DEC); Serial.print('.');
+//    Serial.println(GPS.milliseconds);
+//    Serial.print("Date: ");
+//    Serial.print(GPS.day, DEC); Serial.print('/');
+//    Serial.print(GPS.month, DEC); Serial.print("/20");
+//    Serial.println(GPS.year, DEC);
+//    Serial.print("Fix: "); Serial.print((int)GPS.fix);
+//    Serial.print(" quality: "); Serial.println((int)GPS.fixquality); 
+    if (GPS.fix) {
+//      Serial.print("Location: ");
+//      Serial.print(GPS.latitude, 4); Serial.print(GPS.lat,7);
+//      Serial.print(", "); 
+//      Serial.print(GPS.longitude, 4); Serial.println(GPS.lon,7);
+//      Serial.print("Location (in degrees, works with Google Maps): ");
+//      Serial.print(GPS.latitudeDegrees, 4);
+//      Serial.print(", "); 
+//      Serial.println(GPS.longitudeDegrees, 4);
+      
+//      Serial.print("Speed (knots): "); Serial.println(GPS.speed);
+//      Serial.print("Angle: "); Serial.println(GPS.angle);
+//      Serial.print("Altitude: "); Serial.println(GPS.altitude);
+//      Serial.print("Satellites: "); Serial.println((int)GPS.satellites);
+      mylat = GPS.latitude;
+      mylong = GPS.longitude;
+//      XBee.println("Coordinates Updated!");
+    }
+  }
+  if(String(BluetoothData)=="z" ){                   // move to the bearing 
+    if(currentbearing<targetbearing+10 && currentbearing>targetbearing-10){
+     Motor('r','s');
+     Motor('l','s');
+    }
+    else{
+    if (targetbearing - currentbearing <0){
+     Motor('r','f',basespeed+20);
+     Motor('l','s');
+    }else if (targetbearing - currentbearing >0){
+     Motor('l','f',basespeed+20);
+     Motor('r','s'); 
+     }
+     Serial.println(targetbearing);
+  }
+  if(String(BluetoothData)=="d" ){                   // move to the point
+    PathFinder(mylat,mylong);
+    i = i + deltaHeading;
+//  int motorspeed = kp*deltaHeading + kd *( deltaHeading - lasterror) + ki * i;
+   int motorspeed = kp*deltaHeading + kd *( deltaHeading - lasterror) ;
+   int leftspeed;
+   int rightspeed;
+   leftspeed = min( basespeed + motorspeed, 255);
+   rightspeed = min(basespeed - motorspeed,255);
+   lasterror = deltaHeading;
+   Motor('r','f',rightspeed);
+   Motor('l','f',leftspeed);
+  if (deltaDist<200){
+     Motor('r','s');
+     Motor('l','s');
+     //Serial.println("Destination Reached!");
+//     steppermotor(1);
+     i=0;
+     lasterror=0;
+     mode=0;
+  }
+  }
+  if(String(BluetoothData)=="e" ){                   // calibrate gps
+     Motor('r','s');
+     Motor('l','s');
+     calibrateCMPS11();
+     delay(5000);
+  }
+  }
   
   
 
+}
 }
  
     
