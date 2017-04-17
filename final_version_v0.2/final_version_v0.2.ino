@@ -1,15 +1,36 @@
+#include <SoftwareSerial.h>
+#include <Wire.h>
+#include <Servo.h>
 // One thing needs to be noticed: connect the left motor to myservo and right servo to myservo2
 // for myservo, set the same direction as the real moving direction. For myservo2, gives the opposite direction
 
 //GPS is not included in this version.
 
-//Solar panel is not included in this version.
+//For solar panel turning, this version is using pins: 24,25,26,27,28,29,30,31.
+
+/// solar panel ///
+const int sensorMin = 0;     // sensor minimum for rain sensor
+const int sensorMax = 1024;  // sensor maximum for rain sensor
+
+int motorPin1 = 24;
+int motorPin2 = 25;
+int motorPin3 = 26;
+int motorPin4 = 27;
+int motorPin5 = 28;
+int motorPin6 = 29;
+int motorPin7 = 30;
+int motorPin8 = 31;
+
+int delayTime = 10;
+int s_mode = 0;         // drawer mode
+int r_mode = 0;         // rain sensor mode
+int current_position =0; //stepper position
+int final_position =0;
+int current_leg = 0; //servo position
+int final_leg = 0;
 
 
 
-#include <SoftwareSerial.h>
-#include <Wire.h>
-#include <Servo.h>
 /// HC05///
 SoftwareSerial Genotronex(A8, A9); // RX, TX    (A8-A15 can be used as RX and TX);
 char BluetoothData; // the data given from Computer
@@ -34,9 +55,6 @@ Servo myservo2;  // create servo object to control a servo
 
 int pos = 0;    // variable to store the servo position
 
-int drone = 0;
-int weather = 0;
-int station = 0;        /// current status that is needed to upload to server 
 
 
 //////////////////////////////////////////////////////////////
@@ -74,7 +92,100 @@ long microsecondsToCentimeters(long microseconds)
   return microseconds / 29 / 2;
 }
 
+//// stepper motor ///
+void anticlockwise(){
+  digitalWrite(motorPin1, LOW);
+  digitalWrite(motorPin2, LOW);
+  digitalWrite(motorPin3, LOW);
+  digitalWrite(motorPin4, HIGH);
+  delay(delayTime);
+  digitalWrite(motorPin1, LOW);
+  digitalWrite(motorPin2, LOW);
+  digitalWrite(motorPin3, HIGH);
+  digitalWrite(motorPin4, LOW);
+  delay(delayTime);
+  digitalWrite(motorPin1, LOW);
+  digitalWrite(motorPin2, HIGH);
+  digitalWrite(motorPin3, LOW);
+  digitalWrite(motorPin4, LOW);
+  delay(delayTime);
+  digitalWrite(motorPin1, HIGH);
+  digitalWrite(motorPin2, LOW);
+  digitalWrite(motorPin3, LOW);
+  digitalWrite(motorPin4, LOW);
+  delay(delayTime);
+}
+void clockwise(){
+  digitalWrite(motorPin1, HIGH);
+  digitalWrite(motorPin2, LOW);
+  digitalWrite(motorPin3, LOW);
+  digitalWrite(motorPin4, LOW);
+  delay(delayTime);
+  digitalWrite(motorPin1, LOW);
+  digitalWrite(motorPin2, HIGH);
+  digitalWrite(motorPin3, LOW);
+  digitalWrite(motorPin4, LOW);
+  delay(delayTime);
+  digitalWrite(motorPin1, LOW);
+  digitalWrite(motorPin2, LOW);
+  digitalWrite(motorPin3, HIGH);
+  digitalWrite(motorPin4, LOW);
+  delay(delayTime);
+  digitalWrite(motorPin1, LOW);
+  digitalWrite(motorPin2, LOW);
+  digitalWrite(motorPin3, LOW);
+  digitalWrite(motorPin4, HIGH);
+  delay(delayTime);
+}
 
+void anticlockwise2(){
+  digitalWrite(motorPin5, LOW);
+  digitalWrite(motorPin6, LOW);
+  digitalWrite(motorPin7, LOW);
+  digitalWrite(motorPin8, HIGH);
+  delay(delayTime);
+  digitalWrite(motorPin5, LOW);
+  digitalWrite(motorPin6, LOW);
+  digitalWrite(motorPin7, HIGH);
+  digitalWrite(motorPin8, LOW);
+  delay(delayTime);
+  digitalWrite(motorPin5, LOW);
+  digitalWrite(motorPin6, HIGH);
+  digitalWrite(motorPin7, LOW);
+  digitalWrite(motorPin8, LOW);
+  delay(delayTime);
+  digitalWrite(motorPin5, HIGH);
+  digitalWrite(motorPin6, LOW);
+  digitalWrite(motorPin7, LOW);
+  digitalWrite(motorPin8, LOW);
+  delay(delayTime);
+  
+}
+void clockwise2(){
+  digitalWrite(motorPin5, HIGH);
+  digitalWrite(motorPin6, LOW);
+  digitalWrite(motorPin7, LOW);
+  digitalWrite(motorPin8, LOW);
+  delay(delayTime);
+  digitalWrite(motorPin5, LOW);
+  digitalWrite(motorPin6, HIGH);
+  digitalWrite(motorPin7, LOW);
+  digitalWrite(motorPin8, LOW);
+  delay(delayTime);
+  digitalWrite(motorPin5, LOW);
+  digitalWrite(motorPin6, LOW);
+  digitalWrite(motorPin7, HIGH);
+  digitalWrite(motorPin8, LOW);
+  delay(delayTime);
+  digitalWrite(motorPin5, LOW);
+  digitalWrite(motorPin6, LOW);
+  digitalWrite(motorPin7, LOW);
+  digitalWrite(motorPin8, HIGH);
+  delay(delayTime);
+}
+////
+
+///// motor movement //////
 void Motor(char motor, char direct, int spd=0){
   if (motor == 'l'){
     if (direct == 'f'){
@@ -101,9 +212,7 @@ void Motor(char motor, char direct, int spd=0){
       digitalWrite(9, HIGH);
     }}
   }
-void upload(int drone, int station, int weather){
   
-}
 void setup() {
   myservo.attach(7);  // attaches the servo on pin 7 to the servo object
   myservo2.attach(10);
@@ -120,6 +229,16 @@ void setup() {
   pinMode(13,OUTPUT);
   pinMode(8,OUTPUT);
 
+  //Solar panel steppers
+  pinMode(motorPin1, OUTPUT);
+  pinMode(motorPin2, OUTPUT);
+  pinMode(motorPin3, OUTPUT);
+  pinMode(motorPin4, OUTPUT);
+  pinMode(motorPin5, OUTPUT);
+  pinMode(motorPin6, OUTPUT);
+  pinMode(motorPin7, OUTPUT);
+  pinMode(motorPin8, OUTPUT);
+  pinMode(2, INPUT);
   Motor('r','s');
   Motor('l','s');  
    pinMode(switchbuttonf, INPUT);      // sets the digital pin 13 as output
@@ -128,16 +247,45 @@ void setup() {
 }
   
 void loop() {
+  //always read rain sensor reading first
+  int sensorReading = analogRead(A10);
+  int range = map(sensorReading, sensorMin, sensorMax, 0, 3);   ///0-flood     1-rain warning      2-not raining
+  
+  if (range==1 || range ==2){    //// raining
+    final_position == 0;
+    if (current_position == final_position){
+     //////stop
+     ///do nothing
+  }
+  else if (current_position > final_position){
+     ///back to 0
+     current_position = current_position -1;
+     clockwise();
+     anticlockwise2();
+  }
+  else if(current_position < final_position){
+    ////go to 180
+    current_position = current_position +1;
+    anticlockwise();
+    clockwise2();
+  }
+  }
+
+
   if (Genotronex.available()){
     BluetoothData=Genotronex.read();
     Serial.println(String(BluetoothData));
-   if(String(BluetoothData)=="b"){   // if number 1 pressed ....
+   if(String(BluetoothData)=="b"){   // if button "b" pressed ....
    Genotronex.println("Changed to control mode");
    mode = 'b';
    }
-  if (String(BluetoothData)=="a"){// if number 0 pressed ....
+  if (String(BluetoothData)=="a"){// if button "a" pressed ....
    Genotronex.println("Changed to object following mode");
    mode = 'a';
+  }
+  if (String(BluetoothData)=="g"){// if button "g" pressed ....
+   Genotronex.println("Changed to object following mode");
+   mode = 'g';
   }
   }
 
@@ -192,8 +340,10 @@ void loop() {
     
     
   }
-  else if (mode =='b'){
-    // control mode here
+
+/////////////////    control mode ////////////////////////////
+  
+  else if (mode =='b'){           // control mode here
     Serial.println(String(BluetoothData));
    if(String(BluetoothData)=="f"){   //forward
     //Genotronex.println("forward");
@@ -297,7 +447,109 @@ void loop() {
     delay(10);                       // waits 15ms for the servo to reach the position
   }
   }
+
+
+  
+  if(String(BluetoothData)=='t'){   //// turn solar panels
+    Motor('r','s');
+    Motor('l','s');
+    if (final_position == 0){
+      final_position == 180;
+    }
+    else if (final_position == 180){
+      final_position == 0;
+    }
+    if (range==0){
+      if (current_position == final_position){
+     //////stop
+     ///do nothing
+  }else if (current_position > final_position){
+     ///back to 0
+     current_position = current_position -1;
+     clockwise();
+     anticlockwise2();
   }
+  else if(current_position < final_position){
+    ////go to 180
+    current_position = current_position +1;
+    anticlockwise();
+    clockwise2();
+  }
+    }
+  }
+  if(String(BluetoothData)=='m'){   //// turn legs down 20 degree
+    Motor('r','s');
+    Motor('l','s');
+    final_leg = final_leg+20;
+    for (pos = current_leg; pos <= final_leg; pos += 1) { // goes from 0 degrees to 180 degrees
+    // in steps of 1 degree
+    myservo2.write(180-pos);          // tell servo to go to position in variable 'pos'
+    delay(10);                       // waits 15ms for the servo to reach the position
+  }
+  delay(500);
+    for (pos = 0; pos <= 180; pos += 1) { // goes from 0 degrees to 180 degrees
+    // in steps of 1 degree
+    myservo.write(pos);        // tell servo to go to position in variable 'pos'
+    delay(10);                       // waits 15ms for the servo to reach the position
+    }
+    delay(500);
+  }
+  if(String(BluetoothData)=='n'){   //// turn legs up 20 degree
+    Motor('r','s');
+    Motor('l','s');
+    final_leg = final_leg-20;
+    for (pos = current_leg; pos <= final_leg; pos += 1) { // goes from 0 degrees to 180 degrees
+    // in steps of 1 degree
+    myservo2.write(180-pos);          // tell servo to go to position in variable 'pos'
+    delay(10);                       // waits 15ms for the servo to reach the position
+  }
+  delay(500);
+    for (pos = 0; pos <= 180; pos += 1) { // goes from 0 degrees to 180 degrees
+    // in steps of 1 degree
+    myservo.write(pos);        // tell servo to go to position in variable 'pos'
+    delay(10);                       // waits 15ms for the servo to reach the position
+    }
+    delay(500);
+    
+  }
+  if(String(BluetoothData)=='x'){   //// turn legs down 10 degree
+    Motor('r','s');
+    Motor('l','s');
+    final_leg = final_leg+ 10;
+    for (pos = current_leg; pos <= final_leg; pos += 1) { // goes from 0 degrees to 180 degrees
+    // in steps of 1 degree
+    myservo2.write(180-pos);          // tell servo to go to position in variable 'pos'
+    delay(10);                       // waits 15ms for the servo to reach the position
+  }
+  delay(500);
+    for (pos = 0; pos <= 180; pos += 1) { // goes from 0 degrees to 180 degrees
+    // in steps of 1 degree
+    myservo.write(pos);        // tell servo to go to position in variable 'pos'
+    delay(10);                       // waits 15ms for the servo to reach the position
+    }
+    delay(500);
+    
+  }
+  if(String(BluetoothData)=='y'){   //// turn legs up 10 degree
+    Motor('r','s');
+    Motor('l','s');
+    final_leg = final_leg-10;
+    for (pos = current_leg; pos <= final_leg; pos += 1) { // goes from 0 degrees to 180 degrees
+    // in steps of 1 degree
+    myservo2.write(180-pos);          // tell servo to go to position in variable 'pos'
+    delay(10);                       // waits 15ms for the servo to reach the position
+  }
+  delay(500);
+    for (pos = 0; pos <= 180; pos += 1) { // goes from 0 degrees to 180 degrees
+    // in steps of 1 degree
+    myservo.write(pos);        // tell servo to go to position in variable 'pos'
+    delay(10);                       // waits 15ms for the servo to reach the position
+    }
+    delay(500);
+    
+  }
+  }
+  
   
 
 }
