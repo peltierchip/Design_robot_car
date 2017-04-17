@@ -169,14 +169,14 @@ void loop() {
    }
    if(String(BluetoothData)=="l"){   //left
     //Genotronex.println("left");
-    Motor('r','b',200);
-    Motor('l','b',200);
+    Motor('r','b',255);
+    Motor('l','b',255);
 
    }
    if(String(BluetoothData)=="r"){   //right
     //Genotronex.println("right");
-    Motor('r','f',200);
-    Motor('l','f',200);
+    Motor('r','f',255);
+    Motor('l','f',255);
     }
 
     if(String(BluetoothData)=="s"){   //right

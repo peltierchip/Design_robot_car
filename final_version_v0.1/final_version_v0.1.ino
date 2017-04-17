@@ -27,6 +27,9 @@ Servo myservo2;  // create servo object to control a servo
 
 int pos = 0;    // variable to store the servo position
 
+int drone = 0;
+int weather = 0;
+int station = 0;        /// current status that is needed to upload to server 
 
 
 //////////////////////////////////////////////////////////////
@@ -91,7 +94,9 @@ void Motor(char motor, char direct, int spd=0){
       digitalWrite(9, HIGH);
     }}
   }
+void upload(int drone, int station, int weather){
   
+}
 void setup() {
   myservo.attach(7);  // attaches the servo on pin 9 to the servo object
   myservo2.attach(10);

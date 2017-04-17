@@ -7,7 +7,7 @@
 const char* ssid     = "SUTD_GLAB";
 const char* password = "Gl@b_120513";
 /////// String uri = "host.php";// our example is /esppost.php
-const char* host = "www.victomteng.net";
+const char* host = "nba.hupu.com";
 String PostData = "title=foo&body=bar&userId=1";
 void setup() {
   Serial.begin(115200);
@@ -51,7 +51,8 @@ void loop() {
   }
 
   // We now create a URI for the request
-  String url = "/host.php";
+  //String url = "/host.php";
+  String url = "/18928895.html";
 
 
   Serial.print("Requesting URL: ");

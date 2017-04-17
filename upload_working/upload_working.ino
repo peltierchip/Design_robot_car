@@ -4,6 +4,9 @@
 int rain = 0;
 int drone = 1;
 String postData = "drone=1&rain=0";
+// tried out to use TX/RX communication between adafruit 8266 and arduino mega, not working. too much noise cannot get the useful signal.
+// still need to use other pin connections to get the info from arduino 
+// the general idea would be using analog read and analog write
 
 #include <ESP8266WiFi.h>
 #include <ArduinoHttpClient.h>
@@ -74,7 +77,7 @@ void set_up_code(){
 
 void loop() {
 set_up_code();
-Serial.println("making POST request"); 
+//Serial.println("making POST request"); 
 
 String contentType = "application/x-www-form-urlencoded";
 String postData = "drone=1&rain=1";
@@ -88,15 +91,15 @@ String info = String(response);
 info.remove(0,2);
 info.remove(4);
 Serial.println(info);
-//drone = info[0].toInt;
-//rain = info[2].toInt;
-Serial.print("Status code: ");
-Serial.println(statusCode);
-Serial.print("Response: ");
-Serial.println(response);
+drone = info[0].toInt;
+rain = info[2].toInt;
+//Serial.print("Status code: ");
+//Serial.println(statusCode);
+//Serial.print("Response: ");
+//Serial.println(response);
 
 
-Serial.println("Wait five seconds");
+//Serial.println("Wait ten seconds");
 delay(10000);
 
 } 
