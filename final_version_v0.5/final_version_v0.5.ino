@@ -11,7 +11,7 @@
 /// solar panel ///
 const int sensorMin = 0;     // sensor minimum for rain sensor
 const int sensorMax = 1024;  // sensor maximum for rain sensor
-
+int range;
 int motorPin1 = 24;
 int motorPin2 = 25;
 int motorPin3 = 26;
@@ -28,7 +28,7 @@ int current_position =0; //stepper position
 int final_position=0;
 int current_leg = 0; //servo position
 int final_leg = 0;
-
+String up_data;
 
 
 /// HC05///
@@ -112,7 +112,19 @@ int offset =0;
 //////////////////////////////////////////////////////////////
 
 //// wifi upload ///
+void upload(){
+  String strx = String(mylong);
+  String stry = String(mylat);
 
+  if (range==2){
+    up_data = "pr0d1x"+strx+"y"+stry;
+  }
+  else{
+    up_data = "pr1d1x"+strx+"y"+stry;
+  }
+  WIFI.println(up_data);
+  Genotronex.println("data_uploaded");
+}
 
 
 void ultra_reading(){
@@ -466,12 +478,14 @@ void setup() {
    pinMode(switchbuttonf, INPUT);      // sets the digital pin 13 as output
   pinMode(switchbuttonb, INPUT); 
 
+  WIFI.begin(115200);
+
 }
   
 void loop() {
   //always read rain sensor reading first
   int sensorReading = analogRead(A10);
-  int range = map(sensorReading, sensorMin, sensorMax, 0, 3);   ///0-flood     1-rain warning      2-not raining
+  range = map(sensorReading, sensorMin, sensorMax, 0, 3);   ///0-flood     1-rain warning      2-not raining
   if (range==1 || range ==0){    //// raining
     Serial.println("raining");   
     final_position == 0;
@@ -580,12 +594,37 @@ void loop() {
     //Genotronex.println("left");
     Motor('r','b',255);
     Motor('l','b',255);
-
+//    delay(100);
+//     Motor('r','s',255);
+//    Motor('l','b',255);
+//    delay(100);
    }
    if(String(BluetoothData)=="r"){   //right
     //Genotronex.println("right");
     Motor('r','f',255);
     Motor('l','f',255);
+//    delay(100);
+//    Motor('r','f',255);
+//    Motor('l','s',255);
+//    delay(100);
+    }
+       if(String(BluetoothData)=="d"){   //left shaking 
+    //Genotronex.println("left");
+    Motor('r','b',255);
+    Motor('l','f',200);
+    delay(200);
+     Motor('r','s',255);
+    Motor('l','b',255);
+    delay(200);
+   }
+   if(String(BluetoothData)=="e"){   //right shaking
+    //Genotronex.println("right");
+    Motor('r','b',200);
+    Motor('l','f',255);
+    delay(200);
+    Motor('r','f',255);
+    Motor('l','s',255);
+    delay(200);
     }
 
     if(String(BluetoothData)=="s"){   //right
@@ -760,12 +799,10 @@ void loop() {
     Motor('r','s');
     Motor('l','s');
     if (current_position == 0){
-      final_position = 180;
+      final_position = 160;
       }
-    if (current_position == 180){
-      final_position = 0;
-      Serial.println("changed to 0");   
-      
+    if (current_position == 160){
+      final_position = 0;      
     }
     
     if (range==2){
@@ -777,6 +814,10 @@ void loop() {
      current_position = current_position -1;
      clockwise2();
      anticlockwise();
+     if (current_position <12){       // over turn the solar panel
+     clockwise2();
+     anticlockwise();
+     }
   }
   else if(current_position < final_position){
     ////go to 180
@@ -795,8 +836,9 @@ void loop() {
   else if (mode == 'g'){
     //firtly get current bearing
     currentbearing = GetBearings();
-   Serial.print("Current Bearing : ");
+   Serial.print(String(BluetoothData));
     Serial.println(currentbearing);
+    
 //    Genotronex.println(currentbearing);
 //    Genotronex.println("");
 //    
@@ -876,51 +918,66 @@ if (millis() - timer > 1000) {
   }
   if(String(BluetoothData)=="d" ){                   // move to the point
     PathFinder(mylat,mylong);
-    i = i + deltaHeading;
-    
-//  int motorspeed = kp*deltaHeading + kd *( deltaHeading - lasterror) + ki * i;
-   int motorspeed = kp*deltaHeading + kd *( deltaHeading - lasterror) ;
-   int leftspeed;
-   int rightspeed;
-   
-   Serial.println("destination mode");
-   Serial.println(motorspeed);
-   leftspeed = min( basespeed + motorspeed, 255);
-   rightspeed = min(basespeed - motorspeed,255);
-   lasterror = deltaHeading;
-   Motor('r','f',rightspeed);
-   Motor('l','f',leftspeed);
-  if (deltaDist<200){
+    if (deltaDist<200){
      Motor('r','s');
      Motor('l','s');
      //Serial.println("Destination Reached!");
-//     steppermotor(1);
-     i=0;
-     lasterror=0;
-     mode=0;
+    }
+    else if(currentbearing<targetbearing+10 && currentbearing>targetbearing-10){
+     Motor('r','b',220);
+     Motor('l','f',220);
+    }
+    else{
+    if (targetbearing - currentbearing <0){
+     Motor('r','f',255);
+    Motor('l','f',255);
+    }else if (targetbearing - currentbearing >0){
+     Motor('r','b',255);
+    Motor('l','b',255);
+    }
+     
+//    i = i + deltaHeading;
+//    
+////  int motorspeed = kp*deltaHeading + kd *( deltaHeading - lasterror) + ki * i;
+//   int motorspeed = kp*deltaHeading + kd *( deltaHeading - lasterror) ;
+//   int leftspeed;
+//   int rightspeed;
+//   
+//   Serial.println("destination mode");
+//   Serial.println(motorspeed);
+//   leftspeed = min( basespeed + motorspeed, 255);
+//   rightspeed = min(basespeed - motorspeed,255);
+//   lasterror = deltaHeading;
+//   Motor('r','f',rightspeed);
+//   Motor('l','f',leftspeed);
+//  if (deltaDist<200){
+//     Motor('r','s');
+//     Motor('l','s');
+//     //Serial.println("Destination Reached!");
+////     steppermotor(1);
+//     i=0;
+//     lasterror=0;
+//     mode=0;
+  }
   }
   }
   if(String(BluetoothData)=="e" ){                   // calibrate gps
-    Genotronex.println("calibration starts");
-    
-   Serial.println("calibration starts");
+//    Genotronex.println("calibration starts");
+    Serial.println("calibration starts");
      Motor('r','s');
      Motor('l','s');
      delay(1000);
      Motor('r','f',255);
-    Motor('l','f',255);
+     Motor('l','f',255);
      calibrateCMPS11();
      delay(5000);
      Motor('r','s');
      Motor('l','s');
-     Genotronex.println("calibration ends");
+//     Genotronex.println("calibration ends");
      Serial.println("calibration starts");
   }
   }
-  
-  
 
-}
 }
  
     
