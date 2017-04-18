@@ -77,17 +77,17 @@ Adafruit_GPS GPS(&Serial1);
 #define GPSECHO  true
 boolean usingInterrupt = false;
 void useInterrupt(boolean); // Func prototype keeps Arduino 0023 happy
-float homelat=120.44909667968750000000;
-float homelong=10357.89355468750000000000;
+float homelat=120.4591;
+float homelong=10357.8919;
 float homelat2=120.43170166015625000000;
 float homelong2=10357.91210937500000000000;
 float homelat3=120.43969726562500000000;
 float homelong3=10357.89257812500000000000;
-float tarlat=120.50099945068359375000;
-float tarlong=10357.88964843750000000000;
+float tarlat=120.43170166015625000000;
+float tarlong=10357.91210937500000000000;
 float mylat;
 float mylong;
-float deltaHeading=0.0;
+float deltaHeading;
 float WPHeading;
 float deltaDist;
 float followbearing;
@@ -397,7 +397,7 @@ void PathFinder(float MyLat, float MyLon) {
       //  Serial.print("Longitudinal Distance to Waypoint is: "); Serial.println(deltaLon,7);
       //  Serial.println(deltaLatDist);
       //  Serial.println(deltaLonDist);
-     Serial.println(deltaDist);
+     //Serial.println(deltaDist);
     // Calculate the required heading now that distance has been calculated
      WPHeading = (atan(deltaLonDist/deltaLatDist))*57.3;
     // The following set of If-Else Conditionals normalises the angles about y-axis
@@ -603,28 +603,30 @@ void loop() {
     //Genotronex.println("right");
     Motor('r','f',255);
     Motor('l','f',255);
-//    delay(100);
+//    delay(500);
 //    Motor('r','f',255);
 //    Motor('l','s',255);
-//    delay(100);
+//    delay(500);
     }
        if(String(BluetoothData)=="d"){   //left shaking 
     //Genotronex.println("left");
     Motor('r','b',255);
-    Motor('l','f',200);
+    Motor('l','s');
+    delay(500);
+    Motor('r','s');
     delay(200);
-     Motor('r','s',255);
-    Motor('l','b',255);
-    delay(200);
+//     Motor('r','s',255);
+//    Motor('l','b',255);
+//    delay(500);
    }
    if(String(BluetoothData)=="e"){   //right shaking
     //Genotronex.println("right");
     Motor('r','b',200);
     Motor('l','f',255);
     delay(200);
-    Motor('r','f',255);
-    Motor('l','s',255);
-    delay(200);
+//    Motor('r','f',255);
+//    Motor('l','s',255);
+//    delay(200);
     }
 
     if(String(BluetoothData)=="s"){   //right
@@ -907,33 +909,62 @@ if (millis() - timer > 1000) {
      Motor('l','s');
     }
     else{
-    if (targetbearing - currentbearing <0){
-     Motor('r','f',255);
-    Motor('l','f',255);
-    }else if (targetbearing - currentbearing >0){
-     Motor('r','b',255);
+    if (targetbearing - currentbearing <15){
+    Motor('r','s',255);
     Motor('l','b',255);
+    delay(200);
+     Motor('r','b',255);
+    Motor('l','s',255);
+    delay(200);
+    }else if (targetbearing - currentbearing >15){
+         Motor('r','s',255);
+    Motor('l','f',200);
+    delay(200);
+     Motor('r','f',255);
+    Motor('l','s',255);
+    delay(200);
      }
      Serial.println("bearing mode");
   }
+  }
   if(String(BluetoothData)=="d" ){                   // move to the point
+    
     PathFinder(mylat,mylong);
+    Serial.println(mylat);
+    Serial.println(mylong);
+    Serial.print("delta: ");
+    Serial.println(deltaDist);
     if (deltaDist<200){
      Motor('r','s');
      Motor('l','s');
-     //Serial.println("Destination Reached!");
+     Serial.println("Destination Reached!");
+     mode='b';
+     Motor('r','s');
+     Motor('l','s');
+     delay(10000);
     }
-    else if(currentbearing<targetbearing+10 && currentbearing>targetbearing-10){
+    else if(deltaHeading<15 && deltaHeading>-15){
      Motor('r','b',220);
      Motor('l','f',220);
+     Serial.println("move!");
     }
     else{
-    if (targetbearing - currentbearing <0){
-     Motor('r','f',255);
-    Motor('l','f',255);
-    }else if (targetbearing - currentbearing >0){
-     Motor('r','b',255);
+    if (deltaHeading<-10){
+       Motor('r','s',255);
     Motor('l','b',255);
+    delay(200);
+     Motor('r','b',255);
+    Motor('l','s',255);
+    delay(200);
+    }
+    else if (deltaHeading>10){
+    Motor('r','s',255);
+    Motor('l','f',255);
+    delay(200);
+     Motor('r','f',255);
+    Motor('l','s',255);
+    delay(200);
+    }
     }
      
 //    i = i + deltaHeading;
@@ -958,8 +989,8 @@ if (millis() - timer > 1000) {
 //     i=0;
 //     lasterror=0;
 //     mode=0;
-  }
-  }
+  
+  
   }
   if(String(BluetoothData)=="e" ){                   // calibrate gps
 //    Genotronex.println("calibration starts");
@@ -967,8 +998,12 @@ if (millis() - timer > 1000) {
      Motor('r','s');
      Motor('l','s');
      delay(1000);
-     Motor('r','f',255);
-     Motor('l','f',255);
+    Motor('r','b',255);
+    Motor('l','f',200);
+    delay(200);
+     Motor('r','s',255);
+    Motor('l','b',255);
+    delay(200);
      calibrateCMPS11();
      delay(5000);
      Motor('r','s');
