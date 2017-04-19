@@ -9,6 +9,7 @@
 //For solar panel turning, this version is using pins: 24,25,26,27,28,29,30,31.
 
 /// solar panel ///
+String data;
 const int sensorMin = 0;     // sensor minimum for rain sensor
 const int sensorMax = 1024;  // sensor maximum for rain sensor
 int range;
@@ -20,7 +21,6 @@ int motorPin5 = 32;
 int motorPin6 = 33;
 int motorPin7 = 34;
 int motorPin8 = 35;
-
 int delayTime = 10;
 int s_mode = 0;         // drawer mode
 int r_mode = 0;         // rain sensor mode
@@ -29,11 +29,14 @@ int final_position=0;
 int current_leg = 0; //servo position
 int final_leg = 0;
 String up_data;
+    int t;
+int ir1;
+int ir2;
+int ir3;
 
 
 /// HC05///
 SoftwareSerial Genotronex(A8, A9); // RX, TX    (A8-A15 can be used as RX and TX);
-SoftwareSerial WIFI(14,15);
 char BluetoothData; // the data given from Computer
 
 /// Ultrasonic Sensor///
@@ -77,14 +80,18 @@ Adafruit_GPS GPS(&Serial1);
 #define GPSECHO  true
 boolean usingInterrupt = false;
 void useInterrupt(boolean); // Func prototype keeps Arduino 0023 happy
-float homelat=120.4591;
-float homelong=10357.8919;
+float homelat1=120.43969726562500000000;
+float homelong1=10357.89257812500000000000;
 float homelat2=120.43170166015625000000;
 float homelong2=10357.91210937500000000000;
 float homelat3=120.43969726562500000000;
 float homelong3=10357.89257812500000000000;
-float tarlat=120.43170166015625000000;
-float tarlong=10357.91210937500000000000;
+float homelat4=120.43170166015625000000;
+float homelong4=10357.91210937500000000000;
+float homelat5=120.43969726562500000000;
+float homelong5=10357.89257812500000000000;
+float tarlat=120.43969726562500000000;
+float tarlong=10357.89257812500000000000;
 float mylat;
 float mylong;
 float deltaHeading;
@@ -113,18 +120,29 @@ int offset =0;
 
 //// wifi upload ///
 void upload(){
-  String strx = String(mylong);
-  String stry = String(mylat);
-
-  if (range==2){
-    up_data = "pr0d1x"+strx+"y"+stry;
+   String mylong1 = String(mylong,3);
+   String mylat1 = String(mylat,3);
+   String mybearing1= String(abs(currentbearing),2);
+   if (mybearing1.length() == 5){
+    mybearing1 = "0" + mybearing1;
+   }
+   if (mybearing1.length() == 4){
+    mybearing1 = "00" + mybearing1;
+   }
+   if (range==2){
+    data = "01"+mylong1+mylat1+mybearing1;
   }
-  else{
-    up_data = "pr1d1x"+strx+"y"+stry;
-  }
-  WIFI.println(up_data);
-  Genotronex.println("data_uploaded");
+   else{
+     data = "11"+mylong1+mylat1+mybearing1;
+   }
+   data.remove(21,1);
+   data.remove(14,1);
+   data.remove(5,1);
+   Serial3.println(data);
+    Genotronex.println("data_uploaded");
 }
+  
+
 
 
 void ultra_reading(){
@@ -478,13 +496,35 @@ void setup() {
    pinMode(switchbuttonf, INPUT);      // sets the digital pin 13 as output
   pinMode(switchbuttonb, INPUT); 
 
-  WIFI.begin(115200);
-
+  Serial3.begin(115200);
+  pinMode(A11,INPUT);
+  pinMode(A12,INPUT);
+  pinMode(A13,INPUT);
 }
   
 void loop() {
   //always read rain sensor reading first
   int sensorReading = analogRead(A10);
+  
+
+  ir1 = analogRead(A11);
+  ir2 = analogRead(A12);
+  ir3 = analogRead(A13);
+//  Serial.print("ir1: ");
+//  Serial.println(ir1);
+//  
+//  Serial.print("ir2: ");
+//  Serial.println(ir2);
+//  
+//  Serial.print("ir3: ");
+//  Serial.println(ir3);
+  if(digitalRead(switchbuttonf) == LOW){
+    Serial.println("front switch botton low");
+  }
+  if(digitalRead(switchbuttonb) == LOW){
+    Serial.println("back switch botton low");
+  }
+//  delay(1000);
   range = map(sensorReading, sensorMin, sensorMax, 0, 3);   ///0-flood     1-rain warning      2-not raining
   if (range==1 || range ==0){    //// raining
     Serial.println("raining");   
@@ -582,13 +622,15 @@ void loop() {
     //Serial.println(String(BluetoothData));
    if(String(BluetoothData)=="f"){   //forward
     //Genotronex.println("forward");
-    Motor('r','b',250);
-    Motor('l','f',250);
+      Motor('r','b',180);
+    Motor('l','f',210);
+
    }
   if(String(BluetoothData)=="h"){   //backward
     //Genotronex.println("backward");
-    Motor('r','f',250);
-    Motor('l','b',250);
+      Motor('r','b',180);
+    Motor('l','f',210);
+    
    }
    if(String(BluetoothData)=="l"){   //left
     //Genotronex.println("left");
@@ -612,7 +654,7 @@ void loop() {
     //Genotronex.println("left");
     Motor('r','b',255);
     Motor('l','s');
-    delay(500);
+    delay(400);
     Motor('r','s');
     delay(200);
 //     Motor('r','s',255);
@@ -621,8 +663,10 @@ void loop() {
    }
    if(String(BluetoothData)=="e"){   //right shaking
     //Genotronex.println("right");
-    Motor('r','b',200);
-    Motor('l','f',255);
+    Motor('r','f',255);
+    Motor('l','s');
+    delay(400);
+    Motor('r','s');
     delay(200);
 //    Motor('r','f',255);
 //    Motor('l','s',255);
@@ -750,7 +794,7 @@ void loop() {
     if(String(BluetoothData)=="o"){
       Serial.println("opening");
       Motor('r','s');
-    Motor('l','s');
+      Motor('l','s');
     for (pos = 0; pos <= 180; pos += 1) { // goes from 0 degrees to 180 degrees
     // in steps of 1 degree
     myservo.write(160-pos);          // tell servo to go to position in variable 'pos'
@@ -763,19 +807,23 @@ void loop() {
     delay(10);                       // waits 15ms for the servo to reach the position
     }
     delay(500);
-  while(digitalRead(switchbuttonf) == LOW){
+  while(digitalRead(switchbuttonb) == LOW){
     delay(100);
+    Serial.println("forward");
     Motor('r','b',250);
     Motor('l','f',250);
   }
   Motor('r','s');
     Motor('l','s');
-    }
-    
-    if(String(BluetoothData)=="c"){   
-  while(digitalRead(switchbuttonb) == LOW){
+    delay(5000);
+   while(ir2<100){
     delay(100);
-      Serial.println("b");
+    Motor('r','b',250);
+    Motor('l','f',250);
+   }
+  while(digitalRead(switchbuttonf) == LOW){
+    delay(100);
+    Serial.println("b");
     Motor('r','f',250);
     Motor('l','b',250);
   }
@@ -901,7 +949,9 @@ if (millis() - timer > 1000) {
       Serial.println("gps position get");
 //      XBee.println("Coordinates Updated!");
     }
+    
   }
+  upload();
   if(String(BluetoothData)=="z" ){ 
     // move to the bearing 
     if(currentbearing<targetbearing+10 && currentbearing>targetbearing-10){
@@ -909,19 +959,17 @@ if (millis() - timer > 1000) {
      Motor('l','s');
     }
     else{
-    if (targetbearing - currentbearing <15){
-    Motor('r','s',255);
-    Motor('l','b',255);
-    delay(200);
-     Motor('r','b',255);
-    Motor('l','s',255);
+    if (targetbearing - currentbearing <-15){   /// needs to turn left
+    Motor('r','b',255);
+    Motor('l','s');
+    delay(400);
+    Motor('r','s');
     delay(200);
     }else if (targetbearing - currentbearing >15){
-         Motor('r','s',255);
-    Motor('l','f',200);
-    delay(200);
-     Motor('r','f',255);
-    Motor('l','s',255);
+    Motor('r','f',255);
+    Motor('l','s');
+    delay(400);
+    Motor('r','s');
     delay(200);
      }
      Serial.println("bearing mode");
@@ -938,32 +986,68 @@ if (millis() - timer > 1000) {
      Motor('r','s');
      Motor('l','s');
      Serial.println("Destination Reached!");
+//     mode='b';
+//     Motor('r','s');
+//     Motor('l','s');
+     delay(5000);
+     if (tarlat == homelat1){          // go to second point 
+      tarlat = homelat2;
+      tarlong = homelong2;
+      delay(2000);
+     }
+     if (tarlat == homelat2){          // go to third point 
+      tarlat = homelat3;
+      tarlong = homelong3;
+      delay(2000);
+     }
+     if (tarlat == homelat3){          // go to fourth point
+      tarlat = homelat4;
+      tarlong = homelong4;
+      delay(2000);
+     }
+     if (tarlat == homelat4){          // go to fifth point
+      tarlat = homelat5;
+      tarlong = homelong5;
+      delay(2000);
+     }
+     if (tarlat == homelat5){          // back to control mode, stop (need to control it or else it would be in jerky moving status, because the bluetoothdata is at "d" now, which is move to left in control mode.
      mode='b';
      Motor('r','s');
      Motor('l','s');
      delay(10000);
+     }
     }
     else if(deltaHeading<15 && deltaHeading>-15){
      Motor('r','b',220);
      Motor('l','f',220);
-     Serial.println("move!");
+     Serial.println("forward!");
     }
     else{
     if (deltaHeading<-10){
-       Motor('r','s',255);
-    Motor('l','b',255);
+      Motor('r','b',255);
+    Motor('l','s');
+    delay(400);
+    Motor('r','s');
     delay(200);
-     Motor('r','b',255);
-    Motor('l','s',255);
-    delay(200);
+//       Motor('r','s',255);
+//    Motor('l','b',255);
+//    delay(200);
+//     Motor('r','b',255);
+//    Motor('l','s',255);
+//    delay(200);
     }
     else if (deltaHeading>10){
-    Motor('r','s',255);
-    Motor('l','f',255);
+    Motor('r','f',255);
+    Motor('l','s');
+    delay(400);
+    Motor('r','s');
     delay(200);
-     Motor('r','f',255);
-    Motor('l','s',255);
-    delay(200);
+//    Motor('r','s',255);
+//    Motor('l','f',255);
+//    delay(200);
+//     Motor('r','f',255);
+//    Motor('l','s',255);
+//    delay(200);
     }
     }
      
