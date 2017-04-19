@@ -80,18 +80,25 @@ Adafruit_GPS GPS(&Serial1);
 #define GPSECHO  true
 boolean usingInterrupt = false;
 void useInterrupt(boolean); // Func prototype keeps Arduino 0023 happy
-float homelat1=120.43969726562500000000;
-float homelong1=10357.89257812500000000000;
-float homelat2=120.43170166015625000000;
-float homelong2=10357.91210937500000000000;
-float homelat3=120.43969726562500000000;
-float homelong3=10357.89257812500000000000;
-float homelat4=120.43170166015625000000;
-float homelong4=10357.91210937500000000000;
-float homelat5=120.43969726562500000000;
-float homelong5=10357.89257812500000000000;
-float tarlat=120.43969726562500000000;
-float tarlong=10357.89257812500000000000;
+float homelat1= 120.4492950439;
+
+
+float homelong1=10357.8925781250;
+float homelat2=120.4349975585;
+
+
+float homelong2=10357.8935546875;
+float homelat3=120.4328002929;
+
+
+float homelong3=10357.9111328125;
+float homelat4=120.4683990478;
+
+float homelong4=10357.9423828125;
+float homelat5=120.4345016479;
+float homelong5=10357.9169921875;
+float tarlat=homelat1;
+float tarlong=homelong1;
 float mylat;
 float mylong;
 float deltaHeading;
@@ -139,7 +146,6 @@ void upload(){
    data.remove(14,1);
    data.remove(5,1);
    Serial3.println(data);
-    Genotronex.println("data_uploaded");
 }
   
 
@@ -518,12 +524,12 @@ void loop() {
 //  
 //  Serial.print("ir3: ");
 //  Serial.println(ir3);
-  if(digitalRead(switchbuttonf) == LOW){
-    Serial.println("front switch botton low");
-  }
-  if(digitalRead(switchbuttonb) == LOW){
-    Serial.println("back switch botton low");
-  }
+//  if(digitalRead(switchbuttonf) == LOW){
+//    Serial.println("front switch botton low");
+//  }
+//  if(digitalRead(switchbuttonb) == LOW){
+//    Serial.println("back switch botton low");
+//  }
 //  delay(1000);
   range = map(sensorReading, sensorMin, sensorMax, 0, 3);   ///0-flood     1-rain warning      2-not raining
   if (range==1 || range ==0){    //// raining
@@ -622,14 +628,14 @@ void loop() {
     //Serial.println(String(BluetoothData));
    if(String(BluetoothData)=="f"){   //forward
     //Genotronex.println("forward");
-      Motor('r','b',180);
-    Motor('l','f',210);
+      Motor('r','b',230);
+    Motor('l','f',250);
 
    }
   if(String(BluetoothData)=="h"){   //backward
     //Genotronex.println("backward");
-      Motor('r','b',180);
-    Motor('l','f',210);
+      Motor('r','f',230);
+    Motor('l','b',250);
     
    }
    if(String(BluetoothData)=="l"){   //left
@@ -944,8 +950,8 @@ if (millis() - timer > 1000) {
 //      Serial.print("Satellites: "); Serial.println((int)GPS.satellites);
       mylat = GPS.latitude;
       mylong = GPS.longitude;
-      Serial.println(mylat);
-      Serial.println(mylong);
+        Serial.println(mylat,10);
+      Serial.println(mylong,10);
       Serial.println("gps position get");
 //      XBee.println("Coordinates Updated!");
     }
@@ -962,14 +968,16 @@ if (millis() - timer > 1000) {
     if (targetbearing - currentbearing <-15){   /// needs to turn left
     Motor('r','b',255);
     Motor('l','s');
-    delay(400);
+    delay(200);
     Motor('r','s');
+    Motor('l','b',255);
     delay(200);
     }else if (targetbearing - currentbearing >15){
     Motor('r','f',255);
     Motor('l','s');
-    delay(400);
+    delay(200);
     Motor('r','s');
+    Motor('l','f',255);
     delay(200);
      }
      Serial.println("bearing mode");
@@ -986,6 +994,7 @@ if (millis() - timer > 1000) {
      Motor('r','s');
      Motor('l','s');
      Serial.println("Destination Reached!");
+     Genotronex.println("reach");
 //     mode='b';
 //     Motor('r','s');
 //     Motor('l','s');
@@ -994,6 +1003,7 @@ if (millis() - timer > 1000) {
       tarlat = homelat2;
       tarlong = homelong2;
       delay(2000);
+      Genotronex.println("set to target 2");
      }
      if (tarlat == homelat2){          // go to third point 
       tarlat = homelat3;
@@ -1024,30 +1034,30 @@ if (millis() - timer > 1000) {
     }
     else{
     if (deltaHeading<-10){
-      Motor('r','b',255);
-    Motor('l','s');
-    delay(400);
-    Motor('r','s');
+//      Motor('r','b',255);
+//    Motor('l','s');
+//    delay(400);
+//    Motor('r','s');
+//    delay(200);
+       Motor('r','s',255);
+    Motor('l','b',255);
     delay(200);
-//       Motor('r','s',255);
-//    Motor('l','b',255);
-//    delay(200);
-//     Motor('r','b',255);
-//    Motor('l','s',255);
-//    delay(200);
+     Motor('r','b',255);
+    Motor('l','s',255);
+    delay(200);
     }
     else if (deltaHeading>10){
-    Motor('r','f',255);
-    Motor('l','s');
-    delay(400);
-    Motor('r','s');
+//    Motor('r','f',255);
+//    Motor('l','s');
+//    delay(400);
+//    Motor('r','s');
+//    delay(200);
+    Motor('r','s',255);
+    Motor('l','f',255);
     delay(200);
-//    Motor('r','s',255);
-//    Motor('l','f',255);
-//    delay(200);
-//     Motor('r','f',255);
-//    Motor('l','s',255);
-//    delay(200);
+     Motor('r','f',255);
+    Motor('l','s',255);
+    delay(200);
     }
     }
      
@@ -1098,8 +1108,8 @@ if (millis() - timer > 1000) {
   }
 
 }
- 
-    
+
+
 
 
 
