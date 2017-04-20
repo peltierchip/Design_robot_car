@@ -5,7 +5,7 @@ import httplib, urllib
  
 httpClient = None
 try:
-    params = urllib.urlencode({'start':1,'rain': 1, 'positionx': 1.025, 'positiony': 1.532})
+    params = urllib.urlencode({'start':1,'bearing':092.37,'rain': 1, 'positionx': 120.43, 'positiony': 10357.97,'drone': 1})
     headers = {"Content-type": "application/x-www-form-urlencoded"
                     , "Accept": "text/plain"}
  
