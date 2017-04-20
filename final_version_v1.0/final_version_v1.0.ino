@@ -1,3 +1,5 @@
+
+
 #include <SoftwareSerial.h>
 #include <Wire.h>
 #include <Servo.h>
@@ -629,10 +631,6 @@ void loop() {
     //Genotronex.println("forward");
       Motor('r','b',230);
     Motor('l','f',250);
-    if (cm1<=30||cm2<=30){
-      Motor('r','s');
-    Motor('l','s');
-    }
 
    }
   if(String(BluetoothData)=="h"){   //backward
